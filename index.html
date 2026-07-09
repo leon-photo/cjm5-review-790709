@@ -1,0 +1,873 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CJM 5.0 效果评估</title>
+    <style>
+      :root {
+        --background: #f4f7f8;
+        --foreground: #182026;
+        --muted: #60707b;
+        --panel: #ffffff;
+        --line: #d9e1e5;
+        --blue: #2563eb;
+        --green: #0f8a5f;
+        --amber: #b45309;
+        --red: #b91c1c;
+        --shadow: 0 18px 48px rgba(20, 36, 46, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-width: 320px;
+        margin: 0;
+        background: var(--background);
+        color: var(--foreground);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+
+      button {
+        min-height: 40px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        color: var(--foreground);
+        cursor: pointer;
+        font-weight: 700;
+      }
+
+      button:hover:not(:disabled) {
+        border-color: var(--blue);
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+      }
+
+      .review-shell {
+        min-height: 100vh;
+        padding: 22px;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 16px 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: 0 10px 30px rgba(32, 50, 60, 0.08);
+        backdrop-filter: blur(16px);
+      }
+
+      .title-block p,
+      .case-heading p {
+        margin: 0 0 6px;
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 700;
+      }
+
+      .title-block h1,
+      .case-heading h2 {
+        margin: 0;
+        letter-spacing: 0;
+      }
+
+      .title-block h1 {
+        font-size: 1.8rem;
+        line-height: 1.15;
+      }
+
+      .toolbar,
+      .case-actions,
+      .segmented,
+      .score-row,
+      .tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .toolbar {
+        align-items: center;
+        justify-content: flex-end;
+      }
+
+      .toolbar button,
+      .case-actions button {
+        padding: 0 14px;
+      }
+
+      .ghost-button {
+        color: var(--red);
+      }
+
+      .reviewer-field,
+      .note-field {
+        display: grid;
+        gap: 6px;
+      }
+
+      .reviewer-field {
+        min-width: 150px;
+      }
+
+      .reviewer-field span,
+      .note-field span {
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+
+      .reviewer-field input,
+      .note-field textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        color: var(--foreground);
+        outline: none;
+      }
+
+      .reviewer-field input {
+        height: 40px;
+        padding: 0 12px;
+      }
+
+      .note-field textarea {
+        min-height: 92px;
+        resize: vertical;
+        padding: 12px;
+        line-height: 1.55;
+      }
+
+      .reviewer-field input:focus,
+      .note-field textarea:focus {
+        border-color: var(--blue);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.13);
+      }
+
+      .progress-box {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        min-height: 40px;
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #eef7f3;
+      }
+
+      .progress-box strong {
+        color: var(--green);
+      }
+
+      .progress-box span {
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 700;
+      }
+
+      .case-strip {
+        display: flex;
+        gap: 8px;
+        margin: 18px 0;
+        padding: 4px 0 10px;
+        overflow-x: auto;
+      }
+
+      .case-chip {
+        position: relative;
+        flex: 0 0 48px;
+        width: 48px;
+        height: 42px;
+        font-weight: 800;
+      }
+
+      .case-chip.is-active {
+        border-color: var(--blue);
+        background: #eaf1ff;
+        color: var(--blue);
+      }
+
+      .case-chip.is-done {
+        border-color: rgba(15, 138, 95, 0.45);
+        background: #e8f6f0;
+        color: var(--green);
+      }
+
+      .case-chip.has-missing::after {
+        position: absolute;
+        top: 5px;
+        right: 6px;
+        width: 7px;
+        height: 7px;
+        border-radius: 99px;
+        background: var(--amber);
+        content: "";
+      }
+
+      .work-area {
+        display: grid;
+        gap: 16px;
+      }
+
+      .case-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .case-heading h2 {
+        font-size: 1.45rem;
+      }
+
+      .case-actions {
+        justify-content: flex-end;
+      }
+
+      .warn-badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 40px;
+        padding: 0 12px;
+        border: 1px solid rgba(180, 83, 9, 0.32);
+        border-radius: 8px;
+        background: #fff4df;
+        color: var(--amber);
+        font-size: 0.86rem;
+        font-weight: 800;
+      }
+
+      .image-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        align-items: stretch;
+      }
+
+      .image-panel,
+      .review-panel {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .image-panel {
+        display: grid;
+        grid-template-rows: auto 1fr;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .panel-header {
+        min-height: 72px;
+        padding: 12px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .panel-header h3,
+      .field-group h3 {
+        margin: 0;
+        font-size: 1rem;
+        line-height: 1.25;
+      }
+
+      .panel-header p {
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.78rem;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+      }
+
+      .image-button,
+      .missing-image {
+        width: 100%;
+        min-height: 440px;
+        border: 0;
+        border-radius: 0;
+        background:
+          linear-gradient(45deg, rgba(24, 32, 38, 0.04) 25%, transparent 25%),
+          linear-gradient(-45deg, rgba(24, 32, 38, 0.04) 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, rgba(24, 32, 38, 0.04) 75%),
+          linear-gradient(-45deg, transparent 75%, rgba(24, 32, 38, 0.04) 75%);
+        background-color: #f9fbfc;
+        background-position:
+          0 0,
+          0 10px,
+          10px -10px,
+          -10px 0;
+        background-size: 20px 20px;
+      }
+
+      .image-button {
+        display: grid;
+        place-items: center;
+        padding: 0;
+      }
+
+      .image-button img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        max-height: 72vh;
+        object-fit: contain;
+      }
+
+      .missing-image {
+        display: grid;
+        place-items: center;
+        align-content: center;
+        gap: 8px;
+        padding: 24px;
+        text-align: center;
+      }
+
+      .missing-image strong {
+        color: var(--amber);
+        font-size: 1.35rem;
+      }
+
+      .missing-image span {
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .review-panel {
+        display: grid;
+        gap: 16px;
+        padding: 16px;
+      }
+
+      .field-group {
+        display: grid;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .segmented button,
+      .score-row button,
+      .tag-row button {
+        min-width: 42px;
+        padding: 0 12px;
+      }
+
+      .segmented button.selected,
+      .score-row button.selected,
+      .tag-row button.selected {
+        border-color: var(--green);
+        background: var(--green);
+        color: #fff;
+      }
+
+      .score-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .lightbox {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: none;
+        place-items: center;
+        padding: 56px 24px 24px;
+        background: rgba(7, 12, 16, 0.86);
+      }
+
+      .lightbox.is-open {
+        display: grid;
+      }
+
+      .lightbox button {
+        position: fixed;
+        top: 18px;
+        right: 18px;
+        padding: 0 16px;
+        border-color: rgba(255, 255, 255, 0.28);
+        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+      }
+
+      .lightbox img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      @media (max-width: 1100px) {
+        .topbar,
+        .case-heading {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .toolbar,
+        .case-actions {
+          justify-content: flex-start;
+          width: 100%;
+        }
+      }
+
+      @media (max-width: 900px) {
+        .image-grid,
+        .score-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .image-button,
+        .missing-image {
+          min-height: 360px;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .review-shell {
+          padding: 12px;
+        }
+
+        .topbar {
+          padding: 14px;
+        }
+
+        .title-block h1 {
+          font-size: 1.45rem;
+        }
+
+        .toolbar button,
+        .case-actions button,
+        .reviewer-field,
+        .progress-box {
+          width: 100%;
+        }
+
+        .segmented button,
+        .tag-row button {
+          flex: 1 1 140px;
+        }
+
+        .image-button,
+        .missing-image {
+          min-height: 300px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="review-shell">
+      <header class="topbar">
+        <div class="title-block">
+          <p>7.9 seedream5.0 测试文件夹</p>
+          <h1>CJM 5.0 效果评估</h1>
+        </div>
+        <div class="toolbar">
+          <label class="reviewer-field">
+            <span>评估人</span>
+            <input id="reviewer" placeholder="姓名" />
+          </label>
+          <div class="progress-box" aria-label="评估进度">
+            <strong id="progressCount">0/21</strong>
+            <span id="progressPercent">0%</span>
+          </div>
+          <button id="exportCsv" type="button">导出 CSV</button>
+          <button id="exportJson" type="button">导出 JSON</button>
+          <button id="clearReviews" class="ghost-button" type="button">清空</button>
+        </div>
+      </header>
+
+      <section id="caseStrip" class="case-strip" aria-label="图片编号"></section>
+
+      <section class="work-area">
+        <div class="case-heading">
+          <div>
+            <p id="caseProgress">第 1 组 / 共 21 组</p>
+            <h2 id="caseTitle">编号 1</h2>
+          </div>
+          <div class="case-actions">
+            <span class="warn-badge">CJM 缺 1 张</span>
+            <button id="prevCase" type="button">上一组</button>
+            <button id="nextCase" type="button">下一组</button>
+          </div>
+        </div>
+
+        <div class="image-grid" id="imageGrid"></div>
+
+        <section class="review-panel" aria-label="评估表">
+          <div class="field-group">
+            <h3>综合判断</h3>
+            <div class="segmented" id="winnerControls"></div>
+          </div>
+          <div class="score-grid">
+            <div class="field-group">
+              <h3>CJM 评分</h3>
+              <div class="score-row" id="cjmScores"></div>
+            </div>
+            <div class="field-group">
+              <h3>真美评分</h3>
+              <div class="score-row" id="geminiScores"></div>
+            </div>
+          </div>
+          <div class="field-group">
+            <h3>标签</h3>
+            <div class="tag-row" id="tagControls"></div>
+          </div>
+          <label class="note-field">
+            <span>备注</span>
+            <textarea id="note" placeholder="备注"></textarea>
+          </label>
+        </section>
+      </section>
+    </main>
+
+    <div class="lightbox" id="lightbox" role="dialog" aria-modal="true">
+      <button id="closeLightbox" type="button">关闭</button>
+      <img id="lightboxImage" alt="图片预览" />
+    </div>
+
+    <script>
+      const reviewCases = [
+        { id: "1", label: "01", original: "1_.jpeg", cjm: "1__digicam.jpg", gemini: "1__edited_1.png" },
+        { id: "3", label: "03", original: "3_.jpg", cjm: "3__digicam.jpg", gemini: "3__edited_1.png" },
+        { id: "5", label: "05", original: "5_.jpeg", cjm: "5__digicam.jpg", gemini: "5__edited_1.png" },
+        { id: "7", label: "07", original: "7_.jpeg", cjm: "7__digicam.jpg", gemini: "7__edited_1.png" },
+        { id: "11", label: "11", original: "11_.jpeg", cjm: "11__digicam.jpg", gemini: "11__edited_1.png" },
+        { id: "13", label: "13", original: "13_.jpeg", cjm: "13__digicam.jpg", gemini: "13__edited_1.png" },
+        { id: "15", label: "15", original: "15_.jpeg", cjm: null, gemini: "15__edited_1.png" },
+        { id: "17", label: "17", original: "17_.jpeg", cjm: "17__digicam.jpg", gemini: "17__edited_1.png" },
+        { id: "19", label: "19", original: "19_.jpeg", cjm: "19__digicam.jpg", gemini: "19__edited_1.png" },
+        { id: "21", label: "21", original: "21_.jpeg", cjm: "21__digicam.jpg", gemini: "21__edited_1.png" },
+        { id: "23", label: "23", original: "23_.jpeg", cjm: "23__digicam.jpg", gemini: "23__edited_1.png" },
+        { id: "25", label: "25", original: "25_.jpeg", cjm: "25__digicam.jpg", gemini: "25__edited_1.png" },
+        { id: "27", label: "27", original: "27_.jpeg", cjm: "27__digicam.jpg", gemini: "27__edited_1.png" },
+        { id: "29", label: "29", original: "29_.jpeg", cjm: "29__digicam.jpg", gemini: "29__edited_1.png" },
+        { id: "31", label: "31", original: "31_.jpeg", cjm: "31__digicam.jpg", gemini: "31__edited_1.png" },
+        { id: "33", label: "33", original: "33_.jpeg", cjm: "33__digicam.jpg", gemini: "33__edited_1.png" },
+        { id: "35", label: "35", original: "35_.jpeg", cjm: "35__digicam.jpg", gemini: "35__edited_1.png" },
+        { id: "37", label: "37", original: "37_.jpeg", cjm: "37__digicam.jpg", gemini: "37__edited_1.png" },
+        { id: "39", label: "39", original: "39_.jpg", cjm: "39__digicam.jpg", gemini: "39__edited_1.png" },
+        { id: "41", label: "41", original: "41_.jpeg", cjm: "41__digicam.jpg", gemini: "41__edited_1.png" },
+        { id: "43", label: "43", original: "43_.jpg", cjm: "43__digicam.jpg", gemini: "43__edited_1.png" },
+      ];
+
+      const storageKey = "cjm-5-static-review-state-v1";
+      const scoreOptions = [1, 2, 3, 4, 5];
+      const issueTags = ["色彩偏差", "人像异常", "细节损失", "过度修饰", "构图变化", "可商用"];
+      const winnerOptions = [
+        { value: "cjm", label: "CJM 更好" },
+        { value: "gemini", label: "真美更好" },
+        { value: "tie", label: "差不多" },
+        { value: "reject", label: "都不行" },
+      ];
+      const emptyEntry = { winner: "", cjmScore: 0, geminiScore: 0, tags: [], note: "" };
+
+      const state = loadState();
+      let activeIndex = 0;
+
+      const reviewer = document.getElementById("reviewer");
+      const caseStrip = document.getElementById("caseStrip");
+      const progressCount = document.getElementById("progressCount");
+      const progressPercent = document.getElementById("progressPercent");
+      const caseProgress = document.getElementById("caseProgress");
+      const caseTitle = document.getElementById("caseTitle");
+      const imageGrid = document.getElementById("imageGrid");
+      const winnerControls = document.getElementById("winnerControls");
+      const cjmScores = document.getElementById("cjmScores");
+      const geminiScores = document.getElementById("geminiScores");
+      const tagControls = document.getElementById("tagControls");
+      const note = document.getElementById("note");
+      const prevCase = document.getElementById("prevCase");
+      const nextCase = document.getElementById("nextCase");
+      const lightbox = document.getElementById("lightbox");
+      const lightboxImage = document.getElementById("lightboxImage");
+
+      reviewer.value = state.reviewer || "";
+      reviewer.addEventListener("input", () => {
+        state.reviewer = reviewer.value;
+        saveState();
+      });
+
+      prevCase.addEventListener("click", () => moveCase(-1));
+      nextCase.addEventListener("click", () => moveCase(1));
+      document.getElementById("exportCsv").addEventListener("click", exportCsv);
+      document.getElementById("exportJson").addEventListener("click", exportJson);
+      document.getElementById("clearReviews").addEventListener("click", clearReviews);
+      document.getElementById("closeLightbox").addEventListener("click", closeLightbox);
+      lightbox.addEventListener("click", (event) => {
+        if (event.target === lightbox) closeLightbox();
+      });
+
+      render();
+
+      function loadState() {
+        try {
+          return JSON.parse(localStorage.getItem(storageKey)) || { reviewer: "", reviews: {} };
+        } catch {
+          return { reviewer: "", reviews: {} };
+        }
+      }
+
+      function saveState() {
+        localStorage.setItem(storageKey, JSON.stringify(state));
+      }
+
+      function activeCase() {
+        return reviewCases[activeIndex];
+      }
+
+      function activeEntry() {
+        return state.reviews[activeCase().id] || { ...emptyEntry, tags: [] };
+      }
+
+      function setActiveEntry(patch) {
+        const current = activeEntry();
+        state.reviews[activeCase().id] = {
+          ...current,
+          ...patch,
+          updatedAt: new Date().toISOString(),
+        };
+        saveState();
+        render();
+      }
+
+      function assetPath(group, fileName) {
+        return `assets/${group}/${fileName}`;
+      }
+
+      function render() {
+        renderProgress();
+        renderCaseStrip();
+        renderImages();
+        renderControls();
+      }
+
+      function renderProgress() {
+        const done = reviewCases.filter((item) => state.reviews[item.id]?.winner).length;
+        const pct = Math.round((done / reviewCases.length) * 100);
+        progressCount.textContent = `${done}/${reviewCases.length}`;
+        progressPercent.textContent = `${pct}%`;
+        caseProgress.textContent = `第 ${activeIndex + 1} 组 / 共 ${reviewCases.length} 组`;
+        caseTitle.textContent = `编号 ${activeCase().id}`;
+        prevCase.disabled = activeIndex === 0;
+        nextCase.disabled = activeIndex === reviewCases.length - 1;
+      }
+
+      function renderCaseStrip() {
+        caseStrip.innerHTML = "";
+        reviewCases.forEach((item, index) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = [
+            "case-chip",
+            index === activeIndex ? "is-active" : "",
+            state.reviews[item.id]?.winner ? "is-done" : "",
+            item.cjm ? "" : "has-missing",
+          ].join(" ");
+          button.textContent = item.label;
+          button.addEventListener("click", () => {
+            activeIndex = index;
+            render();
+          });
+          caseStrip.appendChild(button);
+        });
+      }
+
+      function renderImages() {
+        const item = activeCase();
+        imageGrid.innerHTML = "";
+        imageGrid.appendChild(createImagePanel("原图", item.original, assetPath("original", item.original)));
+        imageGrid.appendChild(
+          createImagePanel("CJM", item.cjm, item.cjm ? assetPath("cjm", item.cjm) : null, `未找到编号 ${item.id} 的 CJM 输出`),
+        );
+        imageGrid.appendChild(createImagePanel("真美 / Gemini", item.gemini, assetPath("gemini", item.gemini)));
+      }
+
+      function createImagePanel(title, fileName, src, missingText) {
+        const panel = document.createElement("article");
+        panel.className = "image-panel";
+        panel.innerHTML = `
+          <div class="panel-header">
+            <h3>${escapeHtml(title)}</h3>
+            <p>${escapeHtml(fileName || "缺图")}</p>
+          </div>
+        `;
+        if (src) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "image-button";
+          button.setAttribute("aria-label", `查看${title}`);
+          button.innerHTML = `<img alt="${escapeHtml(title)} ${escapeHtml(fileName || "")}" src="${src}" />`;
+          button.addEventListener("click", () => openLightbox(src));
+          panel.appendChild(button);
+        } else {
+          const missing = document.createElement("div");
+          missing.className = "missing-image";
+          missing.innerHTML = `<strong>缺图</strong><span>${escapeHtml(missingText || "")}</span>`;
+          panel.appendChild(missing);
+        }
+        return panel;
+      }
+
+      function renderControls() {
+        const entry = activeEntry();
+        const item = activeCase();
+        note.value = entry.note || "";
+        note.oninput = () => setActiveEntry({ note: note.value });
+
+        winnerControls.innerHTML = "";
+        winnerOptions.forEach((option) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = option.label;
+          button.className = entry.winner === option.value ? "selected" : "";
+          button.addEventListener("click", () => setActiveEntry({ winner: option.value }));
+          winnerControls.appendChild(button);
+        });
+
+        cjmScores.innerHTML = "";
+        geminiScores.innerHTML = "";
+        scoreOptions.forEach((score) => {
+          cjmScores.appendChild(createScoreButton(score, entry.cjmScore === score, !item.cjm, () => setActiveEntry({ cjmScore: score })));
+          geminiScores.appendChild(createScoreButton(score, entry.geminiScore === score, false, () => setActiveEntry({ geminiScore: score })));
+        });
+
+        tagControls.innerHTML = "";
+        issueTags.forEach((tag) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = tag;
+          button.className = entry.tags.includes(tag) ? "selected" : "";
+          button.addEventListener("click", () => {
+            const tags = entry.tags.includes(tag)
+              ? entry.tags.filter((item) => item !== tag)
+              : [...entry.tags, tag];
+            setActiveEntry({ tags });
+          });
+          tagControls.appendChild(button);
+        });
+      }
+
+      function createScoreButton(score, selected, disabled, onClick) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = score;
+        button.className = selected ? "selected" : "";
+        button.disabled = disabled;
+        button.addEventListener("click", onClick);
+        return button;
+      }
+
+      function moveCase(offset) {
+        activeIndex = Math.max(0, Math.min(reviewCases.length - 1, activeIndex + offset));
+        render();
+      }
+
+      function openLightbox(src) {
+        lightboxImage.src = src;
+        lightbox.classList.add("is-open");
+      }
+
+      function closeLightbox() {
+        lightbox.classList.remove("is-open");
+        lightboxImage.removeAttribute("src");
+      }
+
+      function formatWinner(winner) {
+        return winnerOptions.find((option) => option.value === winner)?.label || "";
+      }
+
+      function buildRows() {
+        return reviewCases.map((item) => {
+          const review = state.reviews[item.id] || emptyEntry;
+          return {
+            reviewer: state.reviewer,
+            caseId: item.id,
+            original: item.original,
+            cjm: item.cjm || "缺图",
+            gemini: item.gemini,
+            winner: formatWinner(review.winner),
+            cjmScore: review.cjmScore || "",
+            geminiScore: review.geminiScore || "",
+            tags: review.tags.join("; "),
+            note: review.note || "",
+            updatedAt: review.updatedAt || "",
+          };
+        });
+      }
+
+      function exportCsv() {
+        const headers = ["评估人", "编号", "原图文件", "CJM文件", "真美文件", "综合判断", "CJM评分", "真美评分", "标签", "备注", "更新时间"];
+        const keys = ["reviewer", "caseId", "original", "cjm", "gemini", "winner", "cjmScore", "geminiScore", "tags", "note", "updatedAt"];
+        const rows = buildRows().map((row) => keys.map((key) => csvCell(row[key])).join(","));
+        downloadBlob("cjm-5-review-results.csv", `\ufeff${headers.map(csvCell).join(",")}\n${rows.join("\n")}`, "text/csv;charset=utf-8");
+      }
+
+      function exportJson() {
+        const payload = {
+          exportedAt: new Date().toISOString(),
+          reviewer: state.reviewer,
+          cases: buildRows(),
+        };
+        downloadBlob("cjm-5-review-results.json", JSON.stringify(payload, null, 2), "application/json;charset=utf-8");
+      }
+
+      function clearReviews() {
+        if (confirm("清空当前浏览器里的所有评估记录？")) {
+          state.reviews = {};
+          saveState();
+          render();
+        }
+      }
+
+      function csvCell(value) {
+        const text = value == null ? "" : String(value);
+        return `"${text.replaceAll('"', '""')}"`;
+      }
+
+      function downloadBlob(fileName, content, type) {
+        const blob = new Blob([content], { type });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, (char) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#039;",
+        })[char]);
+      }
+    </script>
+  </body>
+</html>
